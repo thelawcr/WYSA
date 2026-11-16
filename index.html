@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -10,62 +10,202 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
+<script>
+try {
+  var th = localStorage.getItem('wysa_theme'); th = th ? JSON.parse(th) : 'dark';
+  var dk = th === 'dark' || (th === 'auto' && !matchMedia('(prefers-color-scheme: light)').matches);
+  document.documentElement.setAttribute('data-theme', dk ? 'dark' : 'light');
+  if (localStorage.getItem('wysa_pin')) document.documentElement.classList.add('locked');
+} catch (e) {}
+</script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <div class="bg"><i class="orb o1"></i><i class="orb o2"></i><i class="orb o3"></i></div>
 
+<!-- Pantalla de bloqueo / PIN -->
+<div class="lock" id="lock">
+  <div class="lockbox">
+    <img class="logo" src="icon.svg" alt="">
+    <h2 id="lockTitle">Ingresa tu PIN</h2>
+    <p class="muted" id="lockSub">&nbsp;</p>
+    <div class="dots" id="pinDots"><i></i><i></i><i></i><i></i></div>
+    <div class="pad" id="pinPad">
+      <button data-d="1">1</button><button data-d="2">2</button><button data-d="3">3</button>
+      <button data-d="4">4</button><button data-d="5">5</button><button data-d="6">6</button>
+      <button data-d="7">7</button><button data-d="8">8</button><button data-d="9">9</button>
+      <span></span><button data-d="0">0</button>
+      <button data-back aria-label="Borrar"><svg viewBox="0 0 24 24"><path d="M9 5h11v14H9l-6-7zM13 9l5 6M18 9l-5 6"/></svg></button>
+    </div>
+    <button class="linkbtn" id="pinForgot">Olvidé mi PIN</button>
+    <button class="linkbtn" id="pinCancel">Cancelar</button>
+  </div>
+</div>
+
 <main id="app">
-  <header class="top">
-    <div class="brand">
-      <img src="icon.svg" alt="" class="logo">
-      <div>
-        <p class="muted" id="greeting">Hola</p>
-        <h1>WYSA</h1>
+
+  <!-- ===== INICIO ===== -->
+  <section class="page on" id="p-home">
+    <header class="top">
+      <div class="brand">
+        <img src="icon.svg" alt="" class="logo">
+        <div>
+          <p class="muted" id="greeting">Hola</p>
+          <h1>WYSA</h1>
+        </div>
       </div>
-    </div>
-    <button class="icon-btn glass" id="btnSettings" aria-label="Ajustes">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-    </button>
-  </header>
+    </header>
 
-  <section class="card glass balance">
-    <p class="muted" id="balLabel">Saldo total</p>
-    <h2 id="balance">0</h2>
-    <div class="row">
-      <div class="pill in"><span>Ingresos</span><b id="totIn">0</b></div>
-      <div class="pill out"><span>Gastos</span><b id="totOut">0</b></div>
-    </div>
+    <section class="card glass balance">
+      <p class="muted" id="balLabel">Saldo total</p>
+      <h2 id="balance">0</h2>
+      <div class="row">
+        <div class="pill in"><span>Ingresos</span><b id="totIn">0</b></div>
+        <div class="pill out"><span>Gastos</span><b id="totOut">0</b></div>
+      </div>
+    </section>
+
+    <div class="accs" id="accs"></div>
+    <section class="card glass budget" id="budgetCard"></section>
+    <section class="card glass fixed" id="fixedCard"></section>
+    <section class="card glass fixed" id="goalsCard"></section>
+
+    <div class="sechead"><h3>Recientes</h3><button class="linkbtn" id="seeAll">Ver todos</button></div>
+    <div id="recent"></div>
   </section>
 
-  <div class="accs" id="accs"></div>
-
-  <section class="card glass budget" id="budgetCard"></section>
-
-  <section class="card glass fixed" id="fixedCard"></section>
-
-  <section class="card glass">
-    <div class="seg" id="range">
-      <button data-r="day" class="on">Hoy</button>
-      <button data-r="week">Semana</button>
-      <button data-r="month">Mes</button>
+  <!-- ===== MOVIMIENTOS ===== -->
+  <section class="page" id="p-moves">
+    <h1 class="ptitle">Movimientos</h1>
+    <div class="srow">
+      <label class="searchbar glass">
+        <svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4"/></svg>
+        <input id="q" type="search" placeholder="Buscar nota, categoría o cuenta" autocomplete="off" enterkeyhint="search">
+        <button type="button" id="qClear" hidden aria-label="Limpiar búsqueda"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </label>
+      <button class="icon-btn glass" id="fToggle" aria-label="Filtros">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+        <span class="badge" id="fBadge" hidden>0</span>
+      </button>
     </div>
-    <div class="donut" id="donut">
-      <svg viewBox="0 0 120 120" id="dsvg" role="img" aria-label="Gastos por categoría"></svg>
-      <div class="dcenter"><span class="dl" id="dLbl">Gastado</span><b id="spent">0</b></div>
+    <div class="seg" id="fType">
+      <button data-t="all" class="on">Todos</button>
+      <button data-t="out">Gastos</button>
+      <button data-t="in">Ingresos</button>
+      <button data-t="tr">Transf.</button>
     </div>
-    <div id="legend" class="legend"></div>
+    <div class="card glass fpanel" id="fPanel" hidden>
+      <label class="lbl">Periodo</label>
+      <div class="achips" id="fPeriod">
+        <button class="chip on" data-p="all">Todo</button>
+        <button class="chip" data-p="day">Hoy</button>
+        <button class="chip" data-p="week">7 días</button>
+        <button class="chip" data-p="month">Este mes</button>
+      </div>
+      <label class="lbl">Cuenta</label>
+      <div class="achips" id="fAcc"></div>
+      <label class="lbl" for="fCat">Categoría</label>
+      <select class="field" id="fCat"></select>
+      <button class="soft" id="fReset" type="button">Limpiar filtros</button>
+    </div>
+    <p class="muted fsum" id="fSum"></p>
+    <div id="mList"></div>
   </section>
 
-  <section>
-    <h3>Movimientos</h3>
-    <div id="list"></div>
+  <!-- ===== RESUMEN ===== -->
+  <section class="page" id="p-stats">
+    <h1 class="ptitle">Resumen</h1>
+    <div class="achips" id="statAccs"></div>
+
+    <section class="card glass">
+      <div class="seg" id="range">
+        <button data-r="day" class="on">Hoy</button>
+        <button data-r="week">Semana</button>
+        <button data-r="month">Mes</button>
+      </div>
+      <div class="donut" id="donut">
+        <svg viewBox="0 0 120 120" id="dsvg" role="img" aria-label="Gastos por categoría"></svg>
+        <div class="dcenter"><span class="dl" id="dLbl">Gastado</span><b id="spent">0</b></div>
+      </div>
+      <div id="legend" class="legend"></div>
+    </section>
+
+    <section class="card glass">
+      <div class="fhead"><div><span class="muted">Gasto diario · últimos 7 días</span><b class="fsum2" id="trCap">—</b></div></div>
+      <div class="trend" id="trend"></div>
+    </section>
+
+    <section class="card glass fixed" id="cbCard"></section>
   </section>
+
+  <!-- ===== AJUSTES ===== -->
+  <section class="page" id="p-settings">
+    <h1 class="ptitle">Ajustes</h1>
+
+    <section class="card glass sgroup">
+      <label class="lbl" for="currency">Moneda</label>
+      <select class="field" id="currency">
+        <option value="CRC">₡ Colón costarricense</option>
+        <option value="USD">$ Dólar estadounidense</option>
+        <option value="EUR">€ Euro</option>
+        <option value="MXN">$ Peso mexicano</option>
+        <option value="COP">$ Peso colombiano</option>
+        <option value="GTQ">Q Quetzal</option>
+      </select>
+      <label class="lbl" for="budgetIn">Presupuesto mensual de gastos</label>
+      <input class="field" id="budgetIn" inputmode="decimal" placeholder="0 = sin presupuesto" autocomplete="off">
+    </section>
+
+    <section class="card glass sgroup">
+      <label class="lbl">Apariencia</label>
+      <div class="seg" id="themeSeg">
+        <button data-th="dark">Oscuro</button>
+        <button data-th="light">Claro</button>
+        <button data-th="auto">Automático</button>
+      </div>
+    </section>
+
+    <section class="card glass sgroup">
+      <label class="lbl">Seguridad</label>
+      <p class="sline" id="pinStatus">Sin PIN</p>
+      <div class="two">
+        <button class="soft" id="pinSet" type="button">Activar PIN</button>
+        <button class="soft" id="pinChange" type="button" hidden>Cambiar PIN</button>
+        <button class="soft" id="pinRemove" type="button" hidden>Quitar PIN</button>
+      </div>
+      <p class="hint2">El PIN bloquea la app al abrirla. Tus datos siguen guardándose solo en este dispositivo.</p>
+    </section>
+
+    <section class="card glass sgroup">
+      <label class="lbl">Respaldo de datos</label>
+      <div class="two">
+        <button class="soft" id="btnExport" type="button">Exportar</button>
+        <button class="soft" id="btnImport" type="button">Importar</button>
+      </div>
+      <input type="file" id="fileImport" accept="application/json,.json" hidden>
+      <p class="hint" id="backupMsg"></p>
+    </section>
+
+    <section class="card glass sgroup">
+      <button class="ghost" id="btnClear" type="button">Borrar todos los datos</button>
+    </section>
+    <p class="muted center">WYSA · tus datos viven en este dispositivo</p>
+  </section>
+
 </main>
 
-<button class="fab" id="fab" aria-label="Agregar movimiento">+</button>
+<!-- Barra de navegación -->
+<nav class="tabbar" aria-label="Navegación">
+  <div class="tabin">
+    <button class="tab on" data-tab="home"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h14V10M10 20v-6h4v6"/></svg><span>Inicio</span></button>
+    <button class="tab" data-tab="moves"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Movimientos</span></button>
+    <button class="tab-add" id="fab" aria-label="Agregar movimiento"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button class="tab" data-tab="stats"><svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V4M19 20v-6"/></svg><span>Resumen</span></button>
+    <button class="tab" data-tab="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Ajustes</span></button>
+  </div>
+</nav>
 
-<!-- Hoja agregar -->
+<!-- Hoja: movimiento -->
 <div class="sheet-wrap" id="sheet">
   <div class="scrim" data-close></div>
   <form class="sheet glass" id="form">
@@ -91,35 +231,7 @@
   </form>
 </div>
 
-<!-- Hoja ajustes -->
-<div class="sheet-wrap" id="settings">
-  <div class="scrim" data-close></div>
-  <div class="sheet glass">
-    <div class="grab"></div>
-    <h3>Ajustes</h3>
-    <label class="lbl">Moneda</label>
-    <select class="field" id="currency">
-      <option value="CRC">₡ Colón costarricense</option>
-      <option value="USD">$ Dólar estadounidense</option>
-      <option value="EUR">€ Euro</option>
-      <option value="MXN">$ Peso mexicano</option>
-      <option value="COP">$ Peso colombiano</option>
-      <option value="GTQ">Q Quetzal</option>
-    </select>
-    <label class="lbl" for="budgetIn">Presupuesto mensual de gastos (0 = sin presupuesto)</label>
-    <input class="field" id="budgetIn" inputmode="decimal" placeholder="0" autocomplete="off">
-    <label class="lbl">Respaldo de datos</label>
-    <div class="two">
-      <button class="soft" id="btnExport">Exportar</button>
-      <button class="soft" id="btnImport">Importar</button>
-    </div>
-    <input type="file" id="fileImport" accept="application/json,.json" hidden>
-    <p class="hint" id="backupMsg"></p>
-    <button class="ghost" id="btnClear">Borrar todos los datos</button>
-  </div>
-</div>
-
-<!-- Hoja cuenta -->
+<!-- Hoja: cuenta -->
 <div class="sheet-wrap" id="accSheet">
   <div class="scrim" data-close></div>
   <form class="sheet glass" id="accForm">
@@ -141,7 +253,7 @@
   </form>
 </div>
 
-<!-- Hoja gasto fijo -->
+<!-- Hoja: gasto fijo -->
 <div class="sheet-wrap" id="recSheet">
   <div class="scrim" data-close></div>
   <form class="sheet glass" id="recForm">
@@ -159,6 +271,53 @@
     <div class="achips" id="recAcc"></div>
     <button class="primary" type="submit">Guardar gasto fijo</button>
     <button class="ghost" type="button" id="recDel">Eliminar gasto fijo</button>
+  </form>
+</div>
+
+<!-- Hoja: meta de ahorro -->
+<div class="sheet-wrap" id="goalSheet">
+  <div class="scrim" data-close></div>
+  <form class="sheet glass" id="goalForm">
+    <div class="grab"></div>
+    <h3 id="goalTitle">Nueva meta</h3>
+    <input class="field" id="goalName" placeholder="Nombre (ej. Vacaciones)" maxlength="24" autocomplete="off" required>
+    <div class="two">
+      <input class="field" id="goalTarget" inputmode="decimal" placeholder="Objetivo" autocomplete="off" required>
+      <input class="field" id="goalSaved" inputmode="decimal" placeholder="Ahorrado" autocomplete="off">
+    </div>
+    <label class="lbl">Color</label>
+    <div class="swatches" id="goalColors"></div>
+    <button class="primary" type="submit">Guardar meta</button>
+    <button class="ghost" type="button" id="goalDel">Eliminar meta</button>
+  </form>
+</div>
+
+<!-- Hoja: aportar a meta -->
+<div class="sheet-wrap" id="contribSheet">
+  <div class="scrim" data-close></div>
+  <form class="sheet glass" id="contribForm">
+    <div class="grab"></div>
+    <h3 id="contribTitle">Aportar</h3>
+    <div class="seg" id="contribMode">
+      <button type="button" data-m="add" class="on">Aportar</button>
+      <button type="button" data-m="sub">Retirar</button>
+    </div>
+    <div class="amount"><span class="csym"></span><input id="contribAmount" inputmode="decimal" placeholder="0" autocomplete="off" required></div>
+    <p class="muted center" id="contribInfo"></p>
+    <button class="primary" type="submit">Confirmar</button>
+  </form>
+</div>
+
+<!-- Hoja: presupuesto por categoría -->
+<div class="sheet-wrap" id="cbSheet">
+  <div class="scrim" data-close></div>
+  <form class="sheet glass" id="cbForm">
+    <div class="grab"></div>
+    <h3>Presupuesto por categoría</h3>
+    <div class="cats" id="cbCats"></div>
+    <input class="field" id="cbAmount" inputmode="decimal" placeholder="Límite mensual" autocomplete="off" required>
+    <button class="primary" type="submit">Guardar límite</button>
+    <button class="ghost" type="button" id="cbDel">Quitar límite</button>
   </form>
 </div>
 
