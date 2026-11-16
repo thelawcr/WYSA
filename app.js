@@ -21,7 +21,8 @@ const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } cat
 
 let tx = load('wysa_tx', []);
 let cur = load('wysa_cur', 'CRC');
-let range = 'day', type = 'out', catId = null;
+let range = 'day', type = 'out', catId = null, editId = null;
+let budget = +load('wysa_budget', 0) || 0;
 
 const fmt = n => {
   try { return new Intl.NumberFormat('es-CR', {style:'currency', currency:cur, maximumFractionDigits: cur==='CRC'||cur==='COP'?0:2}).format(n); }
@@ -69,6 +70,8 @@ function render() {
   const h = new Date().getHours();
   $('#greeting').textContent = h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
 
+  renderBudget();
+
   // resumen por categoría
   const spent = tx.filter(t => t.type==='out' && inRange(t.date));
   const total = spent.reduce((a,t)=>a+t.amount,0);
@@ -90,13 +93,30 @@ function render() {
     if (t.date !== last) { html += `<div class="day">${dayLabel(t.date)}</div>`; last = t.date; }
     const c = cat(t.cat);
     now.add(t.id); const fresh = !seen.has(t.id);
-    html += `<div class="item glass${fresh ? ' enter' : ''}" style="--i:${fresh ? n++ : 0}"><div class="ico" style="background:linear-gradient(135deg,${c.c}40,${c.c}12);box-shadow:inset 0 1px 0 rgba(255,255,255,.25)">${ic(c)}</div>
+    html += `<div class="item glass${fresh ? ' enter' : ''}" data-id="${t.id}" style="--i:${fresh ? n++ : 0}"><div class="ico" style="background:linear-gradient(135deg,${c.c}40,${c.c}12);box-shadow:inset 0 1px 0 rgba(255,255,255,.25)">${ic(c)}</div>
       <div class="m"><b>${c.n}</b><span>${esc(t.note||'')}</span></div>
       <div class="a ${t.type}">${t.type==='in'?'+':'−'}${fmt(t.amount)}</div>
       <button class="del" data-id="${t.id}" aria-label="Eliminar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
   });
   seen = now;
   $('#list').innerHTML = html || '<div class="empty">Aún no hay movimientos.<br>Toca + para agregar el primero.</div>';
+}
+
+function renderBudget() {
+  const el = $('#budgetCard');
+  if (!(budget > 0)) {
+    el.innerHTML = '<button class="bset" id="bSet"><span>Definir presupuesto mensual</span><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>';
+    return;
+  }
+  const now = new Date();
+  const spent = tx.filter(t => { const d = new Date(t.date + 'T00:00:00'); return t.type === 'out' && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); }).reduce((a, t) => a + t.amount, 0);
+  const pct = spent / budget, left = budget - spent;
+  const st = pct > 1 ? 'over' : pct >= .8 ? 'warn' : 'ok';
+  el.innerHTML = '<button class="bset head" id="bSet"><span class="muted">Presupuesto del mes</span><span class="pc ' + st + '">' + Math.round(pct * 100) + '%</span></button>'
+    + '<div class="bamt"><b>' + fmt(Math.abs(left)) + '</b><span class="muted">' + (left >= 0 ? 'disponible' : 'por encima del límite') + '</span></div>'
+    + '<div class="bt"><div class="bf ' + st + '" data-w="' + Math.min(100, pct * 100) + '" style="width:0"></div></div>'
+    + '<p class="muted bnote">' + fmt(spent) + ' de ' + fmt(budget) + '</p>';
+  requestAnimationFrame(() => requestAnimationFrame(() => { const f = el.querySelector('.bf'); if (f) f.style.width = f.dataset.w + '%'; }));
 }
 
 function renderCats() {
@@ -120,8 +140,21 @@ $("#date").onchange = syncDate;
 const open = el => el.classList.add('open');
 const close = el => el.classList.remove('open');
 
-$('#fab').onclick = () => { $('#date').value = today(); syncDate(); $('#amount').value=''; $('#note').value=''; renderCats(); open($('#sheet')); setTimeout(()=>$('#amount').focus(), 350); };
-$('#btnSettings').onclick = () => { $('#currency').value = cur; open($('#settings')); };
+function openSheet(t) {
+  editId = t ? t.id : null;
+  type = t ? t.type : 'out'; catId = t ? t.cat : null;
+  document.querySelectorAll('#type button').forEach(x => x.classList.toggle('on', x.dataset.t === type));
+  $('#date').value = t ? t.date : today(); syncDate();
+  $('#amount').value = t ? String(t.amount) : ''; $('#note').value = t ? (t.note || '') : '';
+  $('#btnSave').textContent = t ? 'Guardar cambios' : 'Guardar';
+  renderCats(); open($('#sheet'));
+  if (!t) setTimeout(() => $('#amount').focus(), 350);
+}
+$('#fab').onclick = () => openSheet(null);
+const openSettings = () => { $('#currency').value = cur; $('#budgetIn').value = budget || ''; $('#backupMsg').textContent = ''; open($('#settings')); };
+$('#btnSettings').onclick = openSettings;
+$('#budgetCard').onclick = e => { if (e.target.closest('#bSet')) { openSettings(); if (!budget) setTimeout(() => $('#budgetIn').focus(), 400); } };
+$('#budgetIn').onchange = e => { const v = parseFloat(e.target.value.replace(',', '.')); budget = v > 0 ? v : 0; save('wysa_budget', budget); render(); };
 document.querySelectorAll('[data-close]').forEach(s => s.onclick = () => close(s.parentElement));
 $('#cats').onclick = e => { const b = e.target.closest('.cat'); if (b) { catId = b.dataset.c; renderCats(); } };
 $('#type').onclick = e => {
@@ -140,18 +173,43 @@ $('#form').onsubmit = e => {
   e.preventDefault();
   const amount = parseFloat($('#amount').value.replace(',', '.'));
   if (!(amount > 0)) return $('#amount').focus();
-  tx.push({id: Date.now(), type, cat: catId, amount, note: $('#note').value.trim(), date: $('#date').value || today()});
+  const rec = {type, cat: catId, amount, note: $('#note').value.trim(), date: $('#date').value || today()};
+  if (editId) tx = tx.map(t => t.id === editId ? {...t, ...rec} : t); else tx.push({id: Date.now(), ...rec});
+  editId = null;
   save('wysa_tx', tx); render(); close($('#sheet'));
 };
 $('#list').onclick = e => {
-  const b = e.target.closest('.del'); if (!b) return;
+  const b = e.target.closest('.del');
+  if (!b) { const it = e.target.closest('.item'); const t = it && tx.find(x => x.id === +it.dataset.id); if (t) openSheet(t); return; }
   const row = b.closest(".item"), id = +b.dataset.id;
   const done = () => { tx = tx.filter(t => t.id !== id); save("wysa_tx", tx); render(); };
   if (reduce) return done();
   row.classList.add("leave"); setTimeout(done, 320);
 };
 $('#currency').onchange = e => { cur = e.target.value; save('wysa_cur', cur); render(); };
-$('#btnClear').onclick = () => { if (confirm('¿Borrar todos los movimientos? No se puede deshacer.')) { tx = []; save('wysa_tx', tx); render(); close($('#settings')); } };
+$('#btnClear').onclick = () => { if (confirm('¿Borrar todos los movimientos? No se puede deshacer. Te recomendamos exportar un respaldo antes.')) { tx = []; save('wysa_tx', tx); render(); close($('#settings')); } };
+
+const msg = (t, bad) => { const m = $('#backupMsg'); m.textContent = t; m.classList.toggle('bad', !!bad); };
+$('#btnExport').onclick = () => {
+  const blob = new Blob([JSON.stringify({app: 'wysa', v: 1, exported: new Date().toISOString(), cur, budget, tx}, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'wysa-respaldo-' + today() + '.json';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  msg('Respaldo exportado (' + tx.length + ' movimientos).');
+};
+$('#btnImport').onclick = () => $('#fileImport').click();
+$('#fileImport').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    if (d.app !== 'wysa' || !Array.isArray(d.tx)) throw 0;
+    const ok = d.tx.filter(t => t && Number.isFinite(+t.id) && (t.type === 'in' || t.type === 'out') && +t.amount > 0 && /^\d{4}-\d{2}-\d{2}$/.test(t.date) && typeof t.cat === 'string')
+      .map(t => ({id: +t.id, type: t.type, cat: t.cat, amount: +t.amount, note: String(t.note || '').slice(0, 60), date: t.date}));
+    const have = new Set(tx.map(t => t.id)), add = ok.filter(t => !have.has(t.id));
+    tx = tx.concat(add); save('wysa_tx', tx);
+    if (!budget && +d.budget > 0) { budget = +d.budget; save('wysa_budget', budget); }
+    render(); msg('Importados ' + add.length + ' movimientos nuevos' + (ok.length - add.length ? ' (' + (ok.length - add.length) + ' ya existían).' : '.'));
+  } catch { msg('El archivo no es un respaldo válido de WYSA.', true); }
+};
 
 render();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});

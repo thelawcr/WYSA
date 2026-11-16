@@ -38,6 +38,8 @@
     </div>
   </section>
 
+  <section class="card glass budget" id="budgetCard"></section>
+
   <section class="card glass">
     <div class="seg" id="range">
       <button data-r="day" class="on">Hoy</button>
@@ -79,7 +81,7 @@
       <button type="button" class="chip" data-d="1">Ayer</button>
       <label class="chip" id="pick"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span id="pickLbl">Otra fecha</span><input id="date" type="date" aria-label="Elegir fecha"></label>
     </div>
-    <button class="primary" type="submit">Guardar</button>
+    <button class="primary" type="submit" id="btnSave">Guardar</button>
   </form>
 </div>
 
@@ -98,6 +100,15 @@
       <option value="COP">$ Peso colombiano</option>
       <option value="GTQ">Q Quetzal</option>
     </select>
+    <label class="lbl" for="budgetIn">Presupuesto mensual de gastos (0 = sin presupuesto)</label>
+    <input class="field" id="budgetIn" inputmode="decimal" placeholder="0" autocomplete="off">
+    <label class="lbl">Respaldo de datos</label>
+    <div class="two">
+      <button class="soft" id="btnExport">Exportar</button>
+      <button class="soft" id="btnImport">Importar</button>
+    </div>
+    <input type="file" id="fileImport" accept="application/json,.json" hidden>
+    <p class="hint" id="backupMsg"></p>
     <button class="ghost" id="btnClear">Borrar todos los datos</button>
   </div>
 </div>
