@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>WYSA</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="bg"><i class="orb o1"></i><i class="orb o2"></i><i class="orb o3"></i></div>
+
+<main id="app">
+  <header class="top">
+    <div class="brand">
+      <img src="icon.svg" alt="" class="logo">
+      <div>
+        <p class="muted" id="greeting">Hola</p>
+        <h1>WYSA</h1>
+      </div>
+    </div>
+    <button class="icon-btn glass" id="btnSettings" aria-label="Ajustes">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+  </header>
+
+  <section class="card glass balance">
+    <p class="muted">Saldo total</p>
+    <h2 id="balance">0</h2>
+    <div class="row">
+      <div class="pill in"><span>Ingresos</span><b id="totIn">0</b></div>
+      <div class="pill out"><span>Gastos</span><b id="totOut">0</b></div>
+    </div>
+  </section>
+
+  <section class="card glass">
+    <div class="seg" id="range">
+      <button data-r="day" class="on">Hoy</button>
+      <button data-r="week">Semana</button>
+      <button data-r="month">Mes</button>
+    </div>
+    <div class="summary">
+      <p class="muted">Gastado</p>
+      <b id="spent">0</b>
+    </div>
+    <div id="bars" class="bars"></div>
+  </section>
+
+  <section>
+    <h3>Movimientos</h3>
+    <div id="list"></div>
+  </section>
+</main>
+
+<button class="fab" id="fab" aria-label="Agregar movimiento">+</button>
+
+<!-- Hoja agregar -->
+<div class="sheet-wrap" id="sheet">
+  <div class="scrim" data-close></div>
+  <form class="sheet glass" id="form">
+    <div class="grab"></div>
+    <div class="seg" id="type">
+      <button type="button" data-t="out" class="on">Gasto</button>
+      <button type="button" data-t="in">Ingreso</button>
+    </div>
+    <div class="amount">
+      <span id="curSym">$</span>
+      <input id="amount" inputmode="decimal" placeholder="0" autocomplete="off" required>
+    </div>
+    <div class="cats" id="cats"></div>
+    <input class="field" id="note" placeholder="Nota (opcional)" maxlength="60">
+    <div class="dates" id="dates">
+      <button type="button" class="chip" data-d="0">Hoy</button>
+      <button type="button" class="chip" data-d="1">Ayer</button>
+      <label class="chip" id="pick"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span id="pickLbl">Otra fecha</span><input id="date" type="date" aria-label="Elegir fecha"></label>
+    </div>
+    <button class="primary" type="submit">Guardar</button>
+  </form>
+</div>
+
+<!-- Hoja ajustes -->
+<div class="sheet-wrap" id="settings">
+  <div class="scrim" data-close></div>
+  <div class="sheet glass">
+    <div class="grab"></div>
+    <h3>Ajustes</h3>
+    <label class="lbl">Moneda</label>
+    <select class="field" id="currency">
+      <option value="CRC">₡ Colón costarricense</option>
+      <option value="USD">$ Dólar estadounidense</option>
+      <option value="EUR">€ Euro</option>
+      <option value="MXN">$ Peso mexicano</option>
+      <option value="COP">$ Peso colombiano</option>
+      <option value="GTQ">Q Quetzal</option>
+    </select>
+    <button class="ghost" id="btnClear">Borrar todos los datos</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
