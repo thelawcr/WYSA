@@ -756,3 +756,25 @@ input[type="date"].field::-webkit-calendar-picker-indicator{opacity:.7;cursor:po
 .soft:active{transform:scale(.97)}
 .hint{font-size:12px;color:var(--in);min-height:16px;margin:6px 4px 4px}.hint.bad{color:var(--out)}
 .item{cursor:pointer}
+
+/* Cuentas */
+.accs{display:flex;gap:10px;overflow-x:auto;margin:0 -18px;padding:2px 18px 8px;scroll-snap-type:x proximity;scrollbar-width:none;animation:rise .7s .16s both cubic-bezier(.2,.8,.2,1)}
+.accs::-webkit-scrollbar{display:none}
+.acard{position:relative;flex:0 0 auto;min-width:128px;max-width:180px;display:flex;flex-direction:column;align-items:flex-start;gap:3px;border-radius:20px;padding:12px 14px;text-align:left;cursor:pointer;scroll-snap-align:start;transition:transform .2s,border-color .25s,box-shadow .25s}
+.acard:active{transform:scale(.96)}
+.acard .ai svg{width:22px;height:22px}
+.acard .an{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.acard .ab{font-size:16px;letter-spacing:-.3px}
+.acard.on{border-color:var(--ac);box-shadow:0 8px 32px rgba(0,0,0,.35),0 0 18px color-mix(in srgb,var(--ac) 40%,transparent),inset 0 1px 0 rgba(255,255,255,.18)}
+.acard .ae{position:absolute;top:10px;right:10px}.acard .ae svg{width:14px;height:14px;stroke:var(--muted)}
+.aadd{min-width:84px;align-items:center;justify-content:center;border-style:dashed}.aadd svg{width:22px;height:22px;stroke:var(--muted)}
+.arow{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.alb{flex:0 0 52px;font-size:13px;color:var(--muted)}
+.achips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px}.achips::-webkit-scrollbar{display:none}
+.achips .chip{flex:0 0 auto;white-space:nowrap}.achips .dot{margin-right:0}
+.item .a.tr{color:var(--text)}
+.swatches{display:flex;gap:12px;margin:6px 4px 14px}
+.sw{width:34px;height:34px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:transform .2s,box-shadow .2s}
+.sw.on{border-color:#fff;transform:scale(1.12);box-shadow:0 0 14px currentColor}
+#accDel{margin-top:10px}
+.accs{scroll-padding-left:18px}
