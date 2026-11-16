@@ -134,16 +134,7 @@ function render() {
 
   const spent = view.filter(t => t.type==='out' && inRange(t.date));
   const tot = spent.reduce((a,t)=>a+t.amount,0);
-  tween($('#spent'), tot);
-  const by = {};
-  spent.forEach(t => by[t.cat] = (by[t.cat]||0) + t.amount);
-  const rows = Object.entries(by).sort((a,b)=>b[1]-a[1]);
-  $('#bars').innerHTML = rows.length ? rows.map(([id,v]) => {
-    const c = cat(id);
-    return `<div class="bar"><div class="l"><span><span class="dot" style="background:${c.c}"></span>${c.n}</span><span>${fmt(v)}</span></div>
-      <div class="t"><div class="f" data-w="${v/tot*100}" style="width:0;background:${c.c}"></div></div></div>`;
-  }).join('') : '<div class="empty">Sin gastos en este periodo</div>';
-  requestAnimationFrame(() => requestAnimationFrame(() => $$('.bar .f').forEach(f => f.style.width = f.dataset.w + '%')));
+  renderDonut(spent, tot);
 
   const sorted = [...view].sort((a,b) => b.date.localeCompare(a.date) || b.id - a.id);
   let html = '', last = '', n = 0; const now = new Set();
@@ -169,6 +160,51 @@ function render() {
   seen = now;
   $('#list').innerHTML = html || '<div class="empty">Aún no hay movimientos.<br>Toca + para agregar el primero.</div>';
 }
+
+/* ---------- Dona de gastos por categoría ---------- */
+let donutSel = null, donutRows = [], donutTot = 0, donutKey = '';
+const D_R = 46, D_C = 2 * Math.PI * D_R, D_GAP = 2.4;
+function renderDonut(spent, tot) {
+  const by = {};
+  spent.forEach(t => by[t.cat] = (by[t.cat] || 0) + t.amount);
+  donutRows = Object.entries(by).sort((a, b) => b[1] - a[1]);
+  donutTot = tot;
+  if (!by[donutSel]) donutSel = null;
+  const key = range + '|' + sel + '|' + donutRows.map(([id, v]) => id + v).join(',');
+  const redraw = key !== donutKey; donutKey = key;
+
+  const svgEl = $('#dsvg');
+  if (redraw) {
+    let off = 0, html = '<circle class="dtrack" cx="60" cy="60" r="' + D_R + '"/>';
+    donutRows.forEach(([id, v], i) => {
+      const c = cat(id), len = v / tot * D_C, seg = donutRows.length > 1 ? Math.max(len - D_GAP, 0.5) : len;
+      html += '<circle class="dseg" data-c="' + id + '" cx="60" cy="60" r="' + D_R + '" stroke="' + c.c + '" data-len="' + seg.toFixed(2) + '" data-off="' + off.toFixed(2) + '" style="stroke-dasharray:0 ' + D_C.toFixed(2) + ';stroke-dashoffset:' + (-off).toFixed(2) + ';transition-delay:' + (reduce ? 0 : i * 90) + 'ms"/>';
+      off += len;
+    });
+    svgEl.innerHTML = html;
+    const go = () => svgEl.querySelectorAll('.dseg').forEach(s => { s.style.strokeDasharray = s.dataset.len + ' ' + D_C.toFixed(2); });
+    if (reduce) go(); else requestAnimationFrame(() => requestAnimationFrame(go));
+    $('#legend').innerHTML = donutRows.length ? donutRows.map(([id, v]) => {
+      const c = cat(id);
+      return '<button class="lg" data-c="' + id + '"><span class="dot" style="background:' + c.c + '"></span><span class="ln">' + c.n + '</span><span class="lp">' + Math.round(v / tot * 100) + '%</span><b class="la">' + fmt(v) + '</b></button>';
+    }).join('') : '<div class="empty">Sin gastos en este periodo</div>';
+  }
+  paintDonutSel();
+}
+function paintDonutSel() {
+  const hit = donutSel ? donutRows.find(r => r[0] === donutSel) : null;
+  $$('#dsvg .dseg').forEach(s => { s.classList.toggle('on', s.dataset.c === donutSel); s.classList.toggle('dim', !!donutSel && s.dataset.c !== donutSel); });
+  $$('#legend .lg').forEach(b => { b.classList.toggle('on', b.dataset.c === donutSel); b.classList.toggle('dim', !!donutSel && b.dataset.c !== donutSel); });
+  const el = $('#spent');
+  if (hit) { cancelAnimationFrame(el._raf); el._v = hit[1]; $('#dLbl').textContent = cat(hit[0]).n; el.textContent = fmt(hit[1]); }
+  else { $('#dLbl').textContent = 'Gastado'; tween(el, donutTot); }
+}
+const pickCat = e => {
+  const t = e.target.closest('[data-c]'); if (!t) return;
+  donutSel = donutSel === t.dataset.c ? null : t.dataset.c; paintDonutSel();
+};
+$('#legend').onclick = pickCat;
+$('#dsvg').onclick = pickCat;
 
 function renderAccs() {
   const box = $('#accs'), keep = box.scrollLeft;
