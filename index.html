@@ -42,6 +42,8 @@
 
   <section class="card glass budget" id="budgetCard"></section>
 
+  <section class="card glass fixed" id="fixedCard"></section>
+
   <section class="card glass">
     <div class="seg" id="range">
       <button data-r="day" class="on">Hoy</button>
@@ -136,6 +138,27 @@
     <div class="swatches" id="accColors"></div>
     <button class="primary" type="submit">Guardar cuenta</button>
     <button class="ghost" type="button" id="accDel">Eliminar cuenta</button>
+  </form>
+</div>
+
+<!-- Hoja gasto fijo -->
+<div class="sheet-wrap" id="recSheet">
+  <div class="scrim" data-close></div>
+  <form class="sheet glass" id="recForm">
+    <div class="grab"></div>
+    <h3 id="recTitle">Nuevo gasto fijo</h3>
+    <div class="achips presets" id="recPresets"></div>
+    <input class="field" id="recName" placeholder="Nombre (ej. Luz, Netflix)" maxlength="24" autocomplete="off" required>
+    <div class="two">
+      <input class="field" id="recAmount" inputmode="decimal" placeholder="Monto" autocomplete="off" required>
+      <input class="field" id="recDay" type="number" inputmode="numeric" min="1" max="31" placeholder="Día del mes" required>
+    </div>
+    <label class="lbl">Categoría</label>
+    <div class="cats" id="recCats"></div>
+    <label class="lbl">Se paga con</label>
+    <div class="achips" id="recAcc"></div>
+    <button class="primary" type="submit">Guardar gasto fijo</button>
+    <button class="ghost" type="button" id="recDel">Eliminar gasto fijo</button>
   </form>
 </div>
 

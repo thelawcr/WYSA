@@ -33,8 +33,18 @@ const SYM = {CRC:'₡', USD:'$', EUR:'€', MXN:'$', COP:'$', GTQ:'Q'};
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 
+const defAccs = () => [
+  {id:'cash', name:'Efectivo', type:'cash', color:ACC_COLORS[0], init:0},
+  {id:'card', name:'Tarjeta', type:'bank', color:ACC_COLORS[1], init:0},
+  {id:'savings', name:'Ahorros', type:'save', color:ACC_COLORS[2], init:0},
+];
 let accounts = load('wysa_acc', null);
-if (!Array.isArray(accounts) || !accounts.length) accounts = [{id:'cash', name:'Efectivo', type:'cash', color:ACC_COLORS[0], init:0}];
+if (!Array.isArray(accounts) || !accounts.length) { accounts = defAccs(); save('wysa_seed3', true); }
+else if (!load('wysa_seed3', false)) {
+  // instalaciones anteriores con solo "Efectivo": se agregan Tarjeta y Ahorros
+  if (accounts.length === 1 && accounts[0].id === 'cash') accounts = accounts.concat(defAccs().slice(1));
+  save('wysa_seed3', true);
+}
 let tx = load('wysa_tx', []);
 let cur = load('wysa_cur', 'CRC');
 let budget = +load('wysa_budget', 0) || 0;
@@ -46,6 +56,8 @@ let range = 'day', type = 'out', catId = null, editId = null;
 let sel = 'all';                 // cuenta seleccionada en la vista principal
 let accId = null, fromId = null, toId = null;
 let accEditId = null, accKind = 'cash', accColor = ACC_COLORS[0];
+let recs = load('wysa_rec', []);
+let payRec = null, recEditId = null, recCat = 'bills', recAcc = null;
 
 /* ---------- Utilidades ---------- */
 const fmt = n => {
@@ -118,6 +130,7 @@ function render() {
 
   renderAccs();
   renderBudget();
+  renderFixed();
 
   const spent = view.filter(t => t.type==='out' && inRange(t.date));
   const tot = spent.reduce((a,t)=>a+t.amount,0);
@@ -228,6 +241,7 @@ const open = el => el.classList.add('open');
 const close = el => el.classList.remove('open');
 
 function openSheet(t) {
+  payRec = null;
   editId = t ? t.id : null;
   type = t ? t.type : 'out'; catId = t && t.type !== 'tr' ? t.cat : null;
   const last = load('wysa_last', '');
@@ -265,9 +279,12 @@ $('#form').onsubmit = e => {
     rec = {type, cat: catId, acc: accId, ...base};
     save('wysa_last', accId);
   }
-  if (editId) tx = tx.map(t => t.id === editId ? {id: t.id, ...rec} : t);
+  const pr = payRec;
+  if (pr && type === 'out') rec.rec = pr;
+  if (editId) tx = tx.map(t => t.id === editId ? {id: t.id, ...(type === 'out' && t.rec ? {rec: t.rec} : {}), ...rec} : t);
   else tx.push({id: Date.now(), ...rec});
-  editId = null;
+  if (pr && type === 'out') { recs = recs.map(r => r.id === pr ? {...r, amount} : r); save('wysa_rec', recs); }
+  payRec = null; editId = null;
   save('wysa_tx', tx); render(); close($('#sheet'));
 };
 
@@ -324,6 +341,90 @@ $('#accDel').onclick = () => {
   save('wysa_tx', tx); save('wysa_acc', accounts); render(); close($('#accSheet'));
 };
 
+/* ---------- Gastos fijos ---------- */
+const PRESETS = [
+  {n:'Luz', c:'bills'}, {n:'Agua', c:'bills'}, {n:'Cable', c:'bills'}, {n:'Internet', c:'bills'},
+  {n:'Teléfono', c:'bills'}, {n:'Spotify', c:'fun'}, {n:'Netflix', c:'fun'}, {n:'Alquiler', c:'home'},
+];
+const PLUS = '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
+const CHECK = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const daysIn = (y, m) => new Date(y, m + 1, 0).getDate();
+function recInfo(r) {
+  const now = new Date(), ym = today().slice(0, 7);
+  const paidTx = tx.find(t => t.rec === r.id && t.date.slice(0, 7) === ym);
+  const dueDay = Math.min(r.day, daysIn(now.getFullYear(), now.getMonth()));
+  const diff = dueDay - now.getDate();
+  return {paidTx, dueDay, diff, state: paidTx ? 'paid' : diff < 0 ? 'over' : diff <= 3 ? 'soon' : 'ok'};
+}
+function renderFixed() {
+  const el = $('#fixedCard');
+  if (!recs.length) {
+    el.innerHTML = '<button class="bset" id="recAdd"><span>Agregar gastos fijos (luz, agua, Netflix…)</span><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>';
+    return;
+  }
+  const info = recs.map(r => [r, recInfo(r)]).sort((a, b) => a[1].dueDay - b[1].dueDay || a[0].name.localeCompare(b[0].name));
+  const pend = info.filter(([, i]) => !i.paidTx), pendSum = pend.reduce((a, [r]) => a + r.amount, 0);
+  const rows = info.map(([r, i]) => {
+    const c = cat(r.cat);
+    const sub = i.state === 'paid' ? 'Pagado el ' + new Date(i.paidTx.date + 'T00:00:00').getDate()
+      : i.state === 'over' ? 'Vencido · día ' + i.dueDay
+      : i.diff === 0 ? 'Vence hoy'
+      : i.state === 'soon' ? 'Vence en ' + i.diff + (i.diff === 1 ? ' día' : ' días')
+      : 'Día ' + i.dueDay;
+    return '<div class="rrow" data-id="' + r.id + '"><div class="ico" style="background:linear-gradient(135deg,' + c.c + '40,' + c.c + '12);box-shadow:inset 0 1px 0 rgba(255,255,255,.25)">' + ic(c) + '</div>'
+      + '<div class="m"><b>' + esc(r.name) + '</b><span class="rs ' + i.state + '">' + sub + ' · ' + fmt(r.amount) + '</span></div>'
+      + (i.paidTx ? '<span class="paidtag" aria-label="Pagado">' + CHECK + '</span>' : '<button class="paybtn" data-pay="' + r.id + '">Pagar</button>') + '</div>';
+  }).join('');
+  el.innerHTML = '<div class="fhead"><div><span class="muted">Gastos fijos del mes</span><b class="fsum">' + (pend.length ? fmt(pendSum) + ' pendiente' : 'Todo pagado') + '</b></div>'
+    + '<button class="mini" id="recAdd" aria-label="Agregar gasto fijo">' + PLUS + '</button></div>' + rows;
+}
+$('#fixedCard').onclick = e => {
+  if (e.target.closest('#recAdd')) return openRecSheet(null);
+  const p = e.target.closest('[data-pay]'); if (p) return openPay(recs.find(r => r.id === p.dataset.pay));
+  const row = e.target.closest('.rrow'); if (row) openRecSheet(recs.find(r => r.id === row.dataset.id));
+};
+function openPay(r) {
+  if (!r) return;
+  openSheet(null);
+  type = 'out'; catId = r.cat; accId = acc(r.acc) ? r.acc : accounts[0].id; payRec = r.id;
+  $$('#type button').forEach(x => x.classList.toggle('on', x.dataset.t === 'out'));
+  $('#amount').value = String(r.amount); $('#note').value = r.name; $('#btnSave').textContent = 'Registrar pago';
+  renderCats(); renderAccRow();
+}
+function openRecSheet(r) {
+  recEditId = r ? r.id : null; recCat = r ? r.cat : 'bills'; recAcc = r && acc(r.acc) ? r.acc : accounts[0].id;
+  $('#recTitle').textContent = r ? 'Editar gasto fijo' : 'Nuevo gasto fijo';
+  $('#recName').value = r ? r.name : ''; $('#recAmount').value = r ? String(r.amount) : ''; $('#recDay').value = r ? String(r.day) : '';
+  $('#recDel').style.display = r ? '' : 'none';
+  $('#recPresets').style.display = r ? 'none' : '';
+  paintRec(); open($('#recSheet'));
+  if (!r) setTimeout(() => $('#recName').focus(), 350);
+}
+function paintRec() {
+  $('#recPresets').innerHTML = PRESETS.map(p => '<button type="button" class="chip" data-p="' + p.n + '">' + p.n + '</button>').join('');
+  $('#recCats').innerHTML = CATS.filter(c => c.k === 'out').map(c => '<button type="button" class="cat' + (c.id === recCat ? ' on' : '') + '" data-c="' + c.id + '"><i>' + ic(c) + '</i>' + c.n + '</button>').join('');
+  $('#recAcc').innerHTML = accounts.map(a => '<button type="button" class="chip' + (a.id === recAcc ? ' on' : '') + '" data-id="' + a.id + '"><span class="dot" style="background:' + a.color + '"></span>' + esc(a.name) + '</button>').join('');
+}
+$('#recPresets').onclick = e => { const b = e.target.closest('[data-p]'); if (!b) return; const p = PRESETS.find(x => x.n === b.dataset.p); $('#recName').value = p.n; recCat = p.c; paintRec(); $('#recAmount').focus(); };
+$('#recCats').onclick = e => { const b = e.target.closest('.cat'); if (b) { recCat = b.dataset.c; paintRec(); } };
+$('#recAcc').onclick = e => { const b = e.target.closest('[data-id]'); if (b) { recAcc = b.dataset.id; paintRec(); } };
+$('#recForm').onsubmit = e => {
+  e.preventDefault();
+  const name = $('#recName').value.trim().slice(0, 24), amount = num($('#recAmount').value), day = Math.round(num($('#recDay').value));
+  if (!name) return $('#recName').focus();
+  if (!(amount > 0)) return $('#recAmount').focus();
+  if (!(day >= 1 && day <= 31)) return $('#recDay').focus();
+  const data = {name, amount, day, cat: recCat, acc: recAcc};
+  if (recEditId) recs = recs.map(r => r.id === recEditId ? {...r, ...data} : r);
+  else recs.push({id: 'r' + Date.now().toString(36), ...data});
+  save('wysa_rec', recs); render(); close($('#recSheet'));
+};
+$('#recDel').onclick = () => {
+  const r = recs.find(x => x.id === recEditId); if (!r) return;
+  if (!confirm('¿Eliminar el gasto fijo "' + r.name + '"? Los pagos ya registrados se conservan.')) return;
+  recs = recs.filter(x => x.id !== recEditId); save('wysa_rec', recs); render(); close($('#recSheet'));
+};
+
 /* ---------- Ajustes ---------- */
 const openSettings = () => { $('#currency').value = cur; $('#budgetIn').value = budget || ''; $('#backupMsg').textContent = ''; open($('#settings')); };
 $('#btnSettings').onclick = openSettings;
@@ -339,15 +440,15 @@ $('#range').onclick = e => {
 };
 $('#btnClear').onclick = () => {
   if (confirm('¿Borrar todos los movimientos y cuentas? No se puede deshacer. Te recomendamos exportar un respaldo antes.')) {
-    tx = []; accounts = [{id:'cash', name:'Efectivo', type:'cash', color:ACC_COLORS[0], init:0}]; sel = 'all';
-    save('wysa_tx', tx); save('wysa_acc', accounts); render(); close($('#settings'));
+    tx = []; accounts = defAccs(); recs = []; sel = 'all';
+    save('wysa_tx', tx); save('wysa_acc', accounts); save('wysa_rec', recs); render(); close($('#settings'));
   }
 };
 
 /* ---------- Respaldo ---------- */
 const msg = (t, bad) => { const m = $('#backupMsg'); m.textContent = t; m.classList.toggle('bad', !!bad); };
 $('#btnExport').onclick = () => {
-  const blob = new Blob([JSON.stringify({app:'wysa', v:2, exported:new Date().toISOString(), cur, budget, accounts, tx}, null, 2)], {type:'application/json'});
+  const blob = new Blob([JSON.stringify({app:'wysa', v:3, exported:new Date().toISOString(), cur, budget, accounts, recs, tx}, null, 2)], {type:'application/json'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'wysa-respaldo-' + today() + '.json';
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   msg('Respaldo exportado (' + tx.length + ' movimientos, ' + accounts.length + ' cuentas).');
@@ -369,14 +470,18 @@ $('#fileImport').onchange = async e => {
       if (!t || !Number.isFinite(+t.id) || !(+t.amount > 0) || !/^\d{4}-\d{2}-\d{2}$/.test(t.date)) return;
       const base = {id: +t.id, amount: +t.amount, note: String(t.note || '').slice(0, 60), date: t.date};
       if (t.type === 'tr') { if (ids.has(t.from) && ids.has(t.to) && t.from !== t.to) okTx.push({...base, type: 'tr', from: t.from, to: t.to}); }
-      else if ((t.type === 'in' || t.type === 'out') && typeof t.cat === 'string') okTx.push({...base, type: t.type, cat: t.cat, acc: ids.has(t.acc) ? t.acc : dflt});
+      else if ((t.type === 'in' || t.type === 'out') && typeof t.cat === 'string') okTx.push({...base, type: t.type, cat: t.cat, acc: ids.has(t.acc) ? t.acc : dflt, ...(t.type === 'out' && typeof t.rec === 'string' ? {rec: t.rec} : {})});
     });
     const have = new Set(tx.map(t => t.id)), add = okTx.filter(t => !have.has(t.id));
     tx = tx.concat(add);
-    save('wysa_tx', tx); save('wysa_acc', accounts);
+    const haveR = new Set(recs.map(r => r.id));
+    const newR = (Array.isArray(d.recs) ? d.recs : []).filter(r => r && typeof r.id === 'string' && !haveR.has(r.id) && typeof r.name === 'string' && +r.amount > 0 && +r.day >= 1 && +r.day <= 31)
+      .map(r => ({id: r.id.slice(0, 20), name: r.name.slice(0, 24), amount: +r.amount, day: Math.round(+r.day), cat: CATS.some(c => c.id === r.cat && c.k === 'out') ? r.cat : 'bills', acc: ids.has(r.acc) ? r.acc : dflt}));
+    recs = recs.concat(newR);
+    save('wysa_tx', tx); save('wysa_acc', accounts); save('wysa_rec', recs);
     if (!budget && +d.budget > 0) { budget = +d.budget; save('wysa_budget', budget); }
     render();
-    msg('Importados ' + add.length + ' movimientos nuevos' + (newA.length ? ' y ' + newA.length + ' cuentas' : '') + (okTx.length - add.length ? ' (' + (okTx.length - add.length) + ' ya existían).' : '.'));
+    msg('Importados ' + add.length + ' movimientos nuevos' + (newA.length ? ' y ' + newA.length + ' cuentas' : '') + (newR.length ? ', ' + newR.length + ' gastos fijos' : '') + (okTx.length - add.length ? ' (' + (okTx.length - add.length) + ' ya existían).' : '.'));
   } catch { msg('El archivo no es un respaldo válido de WYSA.', true); }
 };
 
